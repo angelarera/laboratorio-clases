@@ -78,12 +78,12 @@ class CalcularPrecioReserva {
 
   calcularTotalIva(subtotal: number) {
     const iva = 0.21;
-    return parseFloat((subtotal * iva).toFixed(2));
+    return subtotal * iva;
   }
 
   calcularTotalReserva(subtotal: number) {
     const totalIva = this.calcularTotalIva(subtotal);
-    return parseFloat((subtotal + totalIva).toFixed(2));
+    return subtotal + totalIva;
   }
 
   calcularTotalesReservas(reservas: Reserva[]) {
@@ -102,7 +102,11 @@ class CalcularPrecioReserva {
       { subtotal: 0, totalIva: 0, total: 0 }
     );
 
-    return { subtotal, totalIva, total };
+    return {
+      subtotal: subtotal.toFixed(2),
+      totalIva: totalIva.toFixed(2),
+      total: total.toFixed(2),
+    };
   }
 }
 
