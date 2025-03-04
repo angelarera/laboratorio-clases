@@ -31,143 +31,140 @@ const reservas: Reserva[] = [
 
 /////// IMPLEMENTACIÓN ///////
 class CalcularPrecioReserva {
-  tipoHabitacion: "standard" | "suite";
   precioStandard: number;
   precioSuite: number;
-  desayuno: boolean;
-  pax: number;
-  noches: number;
-  iva: number;
-  subtotal: number;
-  total: number;
 
-  constructor(
-    tipoHabitacion: "standard" | "suite",
-    desayuno: boolean,
-    pax: number,
-    noches: number
-  ) {
-    this.tipoHabitacion = tipoHabitacion;
-    this.precioStandard = 0;
-    this.precioSuite = 0;
-    this.desayuno = desayuno;
-    this.pax = pax;
-    this.noches = noches;
-    this.iva = 0.21;
-    this.subtotal = 0;
-    this.total = 0;
+  constructor(precioStandard: number, precioSuite: number) {
+    this.precioStandard = precioStandard;
+    this.precioSuite = precioSuite;
   }
 
-  calcularPrecioBase() {
-    return this.tipoHabitacion === "standard"
-      ? this.precioStandard
-      : this.precioSuite;
+  calcularPrecioBase(tipoHabitacion: "standard" | "suite") {
+    if (tipoHabitacion === "standard") {
+      return this.precioStandard;
+    } else {
+      return this.precioSuite;
+    }
   }
 
-  calcularPrecioAdicionalPersonasExtra() {
-    const personasAdicionales = Math.max(0, this.pax - 1); // Restamos 1 a las personas que reservan, porque la primera no cuenta como cargo extra. Como Math.max() devuelve el mayor de los dos argumentos, si solo hay una persona nos devolverá 0, que es lo que buscamos
+  calcularPrecioAdicionalPersonasExtra(pax: number) {
+    const personasAdicionales = Math.max(0, pax - 1); // Restamos 1 a las personas que reservan, porque la primera no cuenta como cargo extra. Como Math.max() devuelve el mayor de los dos argumentos, si solo hay una persona nos devolverá 0, que es lo que buscamos
 
     return personasAdicionales * 40;
   }
 
-  calcularPrecioDesayuno() {
-    if (this.desayuno) {
-      return this.pax * this.noches * 15;
+  calcularPrecioDesayuno(desayuno: boolean, pax: number, noches: number) {
+    if (desayuno) {
+      return pax * noches * 15;
     }
     return 0;
   }
 
-  calcularSubtotal() {
-    const precioBase = this.calcularPrecioBase();
+  calcularSubtotal(reserva: Reserva) {
+    const precioBase = this.calcularPrecioBase(reserva.tipoHabitacion);
     const precioAdicionalPersonasExtra =
-      this.calcularPrecioAdicionalPersonasExtra();
-    const precioDesayuno = this.calcularPrecioDesayuno();
+      this.calcularPrecioAdicionalPersonasExtra(reserva.pax);
+    const precioDesayuno = this.calcularPrecioDesayuno(
+      reserva.desayuno,
+      reserva.pax,
+      reserva.noches
+    );
 
-    this.subtotal =
-      (precioBase + precioAdicionalPersonasExtra) * this.noches +
-      precioDesayuno;
+    return (
+      (precioBase + precioAdicionalPersonasExtra) * reserva.noches +
+      precioDesayuno
+    );
   }
 
-  calcularTotal() {
-    this.total = parseFloat(
-      (this.subtotal + this.subtotal * this.iva).toFixed(2)
+  calcularTotalIva(subtotal: number) {
+    const iva = 0.21;
+    return parseFloat((subtotal * iva).toFixed(2));
+  }
+
+  calcularTotalReserva(subtotal: number) {
+    const totalIva = this.calcularTotalIva(subtotal);
+    return parseFloat((subtotal + totalIva).toFixed(2));
+  }
+
+  calcularTotalesReservas(reservas: Reserva[]) {
+    const { subtotal, totalIva, total } = reservas.reduce(
+      (acc, reserva) => {
+        const subtotalReserva = this.calcularSubtotal(reserva);
+        const ivaReserva = this.calcularTotalIva(subtotalReserva);
+        const totalReserva = this.calcularTotalReserva(subtotalReserva);
+
+        return {
+          subtotal: acc.subtotal + subtotalReserva,
+          totalIva: acc.totalIva + ivaReserva,
+          total: acc.total + totalReserva,
+        };
+      },
+      { subtotal: 0, totalIva: 0, total: 0 }
     );
+
+    return { subtotal, totalIva, total };
   }
 }
 
 class CalcularPrecioCaso1 extends CalcularPrecioReserva {
-  constructor(
-    tipoHabitacion: "standard" | "suite",
-    desayuno: boolean,
-    pax: number,
-    noches: number
-  ) {
-    super(tipoHabitacion, desayuno, pax, noches);
-    this.precioStandard = 100;
-    this.precioSuite = 150;
+  constructor() {
+    super(100, 150);
   }
 }
 
 class CalcularPrecioCaso2 extends CalcularPrecioReserva {
   descuento: number;
 
-  constructor(
-    tipoHabitacion: "standard" | "suite",
-    desayuno: boolean,
-    pax: number,
-    noches: number
-  ) {
-    super(tipoHabitacion, desayuno, pax, noches);
-    this.precioStandard = 100;
-    this.precioSuite = 100;
+  constructor() {
+    super(100, 100);
     this.descuento = 0.85; // Descuento del 15%
   }
 
-  calcularSubtotal() {
-    super.calcularSubtotal();
-    this.subtotal = this.subtotal * this.descuento;
+  calcularSubtotal(reserva: Reserva) {
+    const subtotalReservaSinDescuento = super.calcularSubtotal(reserva);
+    return parseFloat(
+      (subtotalReservaSinDescuento * this.descuento).toFixed(2)
+    );
   }
 }
 
 /////// COMPROBACIONES ///////
-const reserva = reservas[2];
-
-// Caso 1
-const reservaCaso1 = new CalcularPrecioCaso1(
-  reserva.tipoHabitacion,
-  reserva.desayuno,
-  reserva.pax,
-  reserva.noches
-);
-
-reservaCaso1.calcularSubtotal();
-reservaCaso1.calcularTotal();
+const reservasCaso1 = new CalcularPrecioCaso1();
+const {
+  subtotal: subtotalCaso1,
+  totalIva: totalIvaCaso1,
+  total: totalCaso1,
+} = reservasCaso1.calcularTotalesReservas(reservas);
 
 console.log(
-  "El subtotal de la reserva 3, en caso de ser un cliente particular, es:",
-  reservaCaso1.subtotal
+  "El subtotal de las reservas para el cliente particular es",
+  subtotalCaso1
 );
 console.log(
-  "El total de la reserva 3, en caso de ser un cliente particular, es:",
-  reservaCaso1.total
-);
-
-// Caso 2
-const reservaCaso2 = new CalcularPrecioCaso2(
-  reserva.tipoHabitacion,
-  reserva.desayuno,
-  reserva.pax,
-  reserva.noches
-);
-
-reservaCaso2.calcularSubtotal();
-reservaCaso2.calcularTotal();
-
-console.log(
-  "El subtotal de la reserva 3, en caso de ser el tour operador, es:",
-  reservaCaso2.subtotal
+  "El iva de las reservas para el cliente particular es",
+  totalIvaCaso1
 );
 console.log(
-  "El total de la reserva 3, en caso de ser el tour operador, es:",
-  reservaCaso2.total
+  "El total de las reservas para el cliente particular es",
+  totalCaso1
+);
+
+const reservasCaso2 = new CalcularPrecioCaso2();
+const {
+  subtotal: subtotalCaso2,
+  totalIva: totalIvaCaso2,
+  total: totalCaso2,
+} = reservasCaso2.calcularTotalesReservas(reservas);
+
+console.log(
+  "El subtotal de las reservas para el cliente tour operador es",
+  subtotalCaso2
+);
+console.log(
+  "El iva de las reservas para el cliente tour operador es",
+  totalIvaCaso2
+);
+console.log(
+  "El total de las reservas para el cliente tour operador es",
+  totalCaso2
 );
